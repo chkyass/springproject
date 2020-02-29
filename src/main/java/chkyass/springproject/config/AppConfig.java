@@ -14,6 +14,8 @@ import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import javax.sql.DataSource;
@@ -26,7 +28,7 @@ import java.util.logging.Logger;
 @EnableTransactionManagement
 @ComponentScan("chkyass.springproject")
 @PropertySource({ "classpath:mysql.properties" })
-public class AppConfig {
+public class AppConfig implements WebMvcConfigurer {
     @Autowired
     private Environment env;
 
@@ -44,6 +46,12 @@ public class AppConfig {
         return viewResolver;
     }
 
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/resources/**").addResourceLocations("/resources/");
+    }
+
+
     @Bean
     public DataSource myDataSource() {
 
@@ -58,14 +66,14 @@ public class AppConfig {
             throw new RuntimeException(exc);
         }
 
-        // for sanity's sake, let's log url and user ... just to make sure we are reading the data
+        // for sanity's sake, let's log url and user just to make sure we are reading the data
         logger.info("jdbc.url=" + env.getProperty("jdbc.url"));
         logger.info("jdbc.user=" + env.getProperty("jdbc.user"));
 
         // set database connection props
         myDataSource.setJdbcUrl(env.getProperty("jdbc.url"));
         myDataSource.setUser(env.getProperty("jdbc.user"));
-        myDataSource.setPassword(env.getProperty("jdbc.password"));
+        myDataSource.setPassword(env.getProperty(System.getenv("MYSQL_PASS")));
 
         // set connection pool props
         myDataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
@@ -102,13 +110,15 @@ public class AppConfig {
     }
 
     @Bean
-    public LocalSessionFactoryBean sessionFactory(){
+    @Autowired
+    public LocalSessionFactoryBean sessionFactory(DataSource dataSource){
 
         // create session factorys
         LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
 
         // set the properties
-        sessionFactory.setDataSource(myDataSource());
+        //sessionFactory.setDataSource(myDataSource());
+        sessionFactory.setDataSource(dataSource);
         sessionFactory.setPackagesToScan(env.getProperty("hibernate.packagesToScan"));
         sessionFactory.setHibernateProperties(getHibernateProperties());
 
